@@ -1,5 +1,3 @@
-import type { } from 'vite/client';
-
 export interface AssetImage { index: number; type: string; imageUrl: string; thumbnailUrl: string; }
 export interface AssetPrice { isFree: boolean; finalPrice: string | null; originalPrice: string | null; onSale: boolean; discountPercent: number | null; currency: string; }
 export interface Asset {
