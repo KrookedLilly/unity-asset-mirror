@@ -56,34 +56,43 @@ redistribute Unity content.
 | Personal layer (v1) | Tags + collections + hide-owned (notes & saved searches later) |
 | App security | Simple shared-password gate over the whole app |
 
-## 5. How the data acquisition works (verified)
+## 5. How the data acquisition works (verified 2026-06-13)
 
-Probed `assetstore.unity.com` on 2026-06-13:
+The Asset Store mixes a newer Next.js shell with legacy per-page React controllers.
+Acquisition differs **by page type** — this was probed directly, not assumed:
 
-- The site is **Next.js**; product and listing pages **server-render an embedded
-  Apollo GraphQL cache** directly in the HTML (objects carry `__typename` markers
-  such as `ProductImage`, `PackageRating`, `Price`).
-- A product page contains the **full media gallery** as a structured `images` array.
-  Example asset returned **98 screenshots**, each with `imageUrl` (full-res) and
-  `thumbnailUrl`, plus rich fields: `price`, `rating`, `reviewCount`, `publisher`,
-  `keyFeatures`, `compatibilityInfo`, `downloadSize`, `currentVersion`,
-  `publishedDate`, `category`.
-- Media is hosted on public CDNs (`assetstorev1-prd-cdn.unity3d.com`,
+**Product detail pages — SSR, fully parseable (CONFIRMED):**
+- Each page runs an inline hydration call:
+  `window["Product_ProductDetailController"].ReactDOMrender({ data, contextData, options })`.
+- Extract that JSON argument (brace-balanced, string-aware) and `JSON.parse` it. The
+  main product sits at `data.ENTITY.Product[<id>]` — a 38-field object including the
+  **full `images[]` array** (each with `imageUrl` full-res + `thumbnailUrl`), plus
+  `name`, `description`, `keyFeatures`, `rating`, `reviewCount`, `downloadSize`,
+  `publisher`, pricing (`originalPrice` / `srps`), `category`,
+  `supportedUnityVersions`, `popularTags`, etc.
+- **Fetch by id alone works:** `GET /packages/p/<id>` 301-redirects to the canonical
+  product URL, so the asset endpoint needs only the numeric id (no slug).
+- Media is on public CDNs (`assetstorev1-prd-cdn.unity3d.com`,
   `unity-assetstorev2-prd.storage.googleapis.com`) — directly embeddable, no auth.
-- No Cloudflare challenge was hit with a normal browser User-Agent.
-- Search/listing is Coveo/Solr-backed; listing pages embed the product list the
-  same way.
+- No Cloudflare challenge with a normal browser User-Agent.
+
+**Search & category listings — CLIENT-SIDE Coveo, NOT in the HTML (CONFIRMED):**
+- `/search` and category pages render results **client-side via Coveo**; the server
+  HTML contains only shared page furniture (the same 27 `/packages/` links appear on
+  unrelated pages), **no result cards**.
+- Therefore listings **cannot** be obtained by SSR-parsing. They require calling
+  Coveo's search API (endpoint + organization + a search token the page mints) or a
+  Unity search-proxy endpoint — to be reverse-engineered in a dedicated **Search
+  spike** before that feature is built.
 - Legacy JSON endpoints (`/api/en-US/content/overview/{id}.json`) are dead (404/301).
 
-**Therefore the acquisition strategy is uniform:** fetch the relevant Asset Store
-URL (with the session cookie for account pages), parse the embedded JSON out of the
-HTML, map it to typed domain objects. No GraphQL reverse-engineering, no API keys.
+**My Assets / wishlist — not yet probed** (require auth; deferred). Their page URLs
+and shape are a discovery sub-task in the Account phase.
 
-> **Not yet probed:** the exact **My Assets** and **wishlist** page URLs and their
-> embedded shape (they require auth, which we deferred). Phase 4 includes a
-> discovery sub-task: log in, capture those pages, and build their parser.
-> A direct Coveo search API call is a possible optimization but is **not** the
-> default; SSR-parse is the baseline to avoid API-token fragility.
+**Net:** detail + gallery are fully grounded and built **first**; search/browse is
+gated on the **Coveo spike**; account pages on the **auth-discovery** task. The
+acquisition technique is therefore *not* uniform across page types — the plan
+sequences each piece behind whatever grounding it needs.
 
 ## 6. Architecture
 
@@ -230,17 +239,18 @@ a signed session cookie. Intended for the user's own LAN/server, not public expo
 - **Account page shapes unverified** — My Assets/wishlist parsing is a Phase 4
   discovery task (see §5 note).
 
-## 15. Build phases
+## 15. Build phases (each its own plan)
 
-1. **Core read path** — Fetcher + Parser + Cache + `GET /api/asset/:id` +
-   `GET /api/search`. Parser tests against saved sample pages.
-2. **The gallery** — mobile-first asset page + PhotoSwipe lightbox. (User's #1 pain,
-   fixed early.)
-3. **Browse/search UI** — categories, filters, sort, results grid.
-4. **Account** — cookie auth, My Assets + wishlist discovery & parser, owned/wishlist
+1. **Detail + Gallery MVP** — Fetcher + detail Parser + SQLite cache +
+   `GET /api/asset/:id` (+ refresh); minimal Vue PWA: open an asset by id/URL → asset
+   page + **PhotoSwipe swipe gallery**. Parser tested against a saved detail fixture.
+   *(Fully grounded; fixes the #1 pain first.)*
+2. **Search & Browse** — **Coveo reverse-engineering spike first**, then the search
+   endpoint + browse UI (categories, filters, sort, results grid).
+3. **Account** — cookie auth, My Assets + wishlist discovery & parser, owned/wishlist
    overlay + hide-owned.
-5. **Personal layer** — tags + collections.
-6. *(Later, separate spike — out of scope here)* download-manager feasibility probe.
+4. **Personal layer** — tags + collections.
+5. *(Later, separate spike — out of scope here)* download-manager feasibility probe.
 
 ## 16. Future / deferred
 
