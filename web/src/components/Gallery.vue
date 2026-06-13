@@ -27,7 +27,10 @@ function openAt(index: number) {
   });
   lightbox.init();
   lightbox.loadAndOpen(index);
-  lightbox.on('destroy', () => lightbox.destroy());
+  // No manual lightbox.destroy() needed: PhotoSwipe's built-in destroy handler clears
+  // window.pswp and lightbox.pswp; calling lightbox.destroy() inside the 'destroy' event
+  // causes infinite recursion (pswp.dispatch('destroy') → lightbox.destroy() → pswp.destroy()
+  // → dispatch('destroy') → …). The lightbox GCs naturally after pswp clears its listeners.
 }
 </script>
 
