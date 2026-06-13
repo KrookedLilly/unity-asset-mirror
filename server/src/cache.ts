@@ -19,7 +19,11 @@ export function getCachedAsset(db: Db, id: string, maxAgeMs: number): Asset | nu
     | { json: string; fetchedAt: number } | undefined;
   if (!row) return null;
   if (Date.now() - row.fetchedAt > maxAgeMs) return null;
-  return JSON.parse(row.json) as Asset;
+  try {
+    return JSON.parse(row.json) as Asset;
+  } catch {
+    return null;
+  }
 }
 
 export function putAsset(db: Db, asset: Asset): void {

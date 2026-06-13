@@ -35,4 +35,10 @@ describe('cache', () => {
     putAsset(db, a);
     expect(getCachedAsset(db, '3', 60_000)?.name).toBe('Y');
   });
+
+  it('treats a corrupted row as a miss', () => {
+    const db = openDb(':memory:');
+    db.prepare('INSERT INTO assets (id, json, fetched_at) VALUES (?,?,?)').run('9', 'GARBAGE{', Date.now());
+    expect(getCachedAsset(db, '9', 60_000)).toBeNull();
+  });
 });

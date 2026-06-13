@@ -26,6 +26,12 @@ describe('routes', () => {
     expect(res.status).toBe(502);
   });
 
+  it('returns 500 on an unexpected error', async () => {
+    const res = await request(app(async () => { throw new Error('db exploded'); }))
+      .get('/api/asset/1');
+    expect(res.status).toBe(500);
+  });
+
   it('POST /api/asset/:id/refresh forces a refetch', async () => {
     let forced = false;
     const res = await request(app(async (_db: any, _id: string, opts: any) => { forced = opts?.force; return fakeAsset; }))

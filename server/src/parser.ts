@@ -1,3 +1,5 @@
+import type { Asset, AssetImage, AssetPrice } from './types.js';
+
 export class ParserError extends Error {
   constructor(message: string) { super(message); this.name = 'ParserError'; }
 }
@@ -35,8 +37,6 @@ export function extractHydrationJson(html: string): any {
     throw new ParserError(`failed to parse hydration JSON — parser needs updating: ${(e as Error).message}`);
   }
 }
-
-import type { Asset, AssetImage, AssetPrice } from './types.js';
 
 function normalizeUrl(u: unknown): string | null {
   if (typeof u !== 'string' || !u) return null;
@@ -80,7 +80,7 @@ export function parseAssetDetail(html: string, id: string): Asset {
     finalPrice: op.finalPrice ?? null,
     originalPrice: op.originalPrice ?? null,
     onSale: !!(op.discount && Number(op.discount.percentage) > 0),
-    discountPercent: op.discount?.percentage ?? null,
+    discountPercent: Number(op.discount?.percentage) || null,
     currency: op.currency ?? 'USD',
   };
 
@@ -90,7 +90,7 @@ export function parseAssetDetail(html: string, id: string): Asset {
         type: im.type ?? 'screenshot',
         imageUrl: normalizeUrl(im.imageUrl) ?? '',
         thumbnailUrl: normalizeUrl(im.thumbnailUrl) ?? normalizeUrl(im.imageUrl) ?? '',
-      })).filter((im) => im.imageUrl !== '')
+      })).filter((im: AssetImage) => im.imageUrl !== '')
     : [];
 
   return {

@@ -11,7 +11,7 @@ export function buildApp(db: Db, deps: Deps = { getAsset: defaultGetAsset }): Ex
   const app = express();
   app.use(express.json());
 
-  const send = async (db: Db, id: string, force: boolean, res: express.Response) => {
+  const send = async (id: string, force: boolean, res: express.Response) => {
     try {
       res.json(await deps.getAsset(db, id, { force }));
     } catch (e) {
@@ -22,12 +22,12 @@ export function buildApp(db: Db, deps: Deps = { getAsset: defaultGetAsset }): Ex
 
   app.get('/api/asset/:id', (req, res) => {
     if (!/^\d+$/.test(req.params.id)) { res.status(400).json({ error: 'invalid id' }); return; }
-    void send(db, req.params.id, req.query.refresh === '1', res);
+    void send(req.params.id, req.query.refresh === '1', res);
   });
 
   app.post('/api/asset/:id/refresh', (req, res) => {
     if (!/^\d+$/.test(req.params.id)) { res.status(400).json({ error: 'invalid id' }); return; }
-    void send(db, req.params.id, true, res);
+    void send(req.params.id, true, res);
   });
 
   return app;
