@@ -4,3 +4,8 @@ dist/
 *.sqlite
 *.sqlite-*
 .DS_Store
+
+# toolchain artifacts
+*.tsbuildinfo
+test-results/
+playwright-report/
