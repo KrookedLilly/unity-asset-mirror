@@ -10,6 +10,9 @@ const error = ref('');
 const loading = ref(false);
 
 watchEffect(async () => {
+  // safe: each asset gets a fresh mount (navigating away unmounts); the await race here
+  // is not triggerable in the current router. Revisit with AbortSignal if a same-component
+  // id-swap route (e.g. /asset/:id → /asset/:id without unmount) is ever added.
   loading.value = true; error.value = ''; asset.value = null;
   try { asset.value = await getAsset(props.id); }
   catch (e) { error.value = (e as Error).message; }
@@ -47,6 +50,10 @@ const clean = (html: string | null) => (html ? DOMPurify.sanitize(html) : '');
       <section v-if="asset.description">
         <h2 class="text-sm uppercase tracking-wide text-gray-500 mb-1">Description</h2>
         <div class="prose-invert text-sm leading-relaxed" v-html="clean(asset.description)" />
+      </section>
+      <section v-if="asset.keyFeatures">
+        <h2 class="text-sm uppercase tracking-wide text-gray-500 mb-1">Key Features</h2>
+        <div class="prose-invert text-sm leading-relaxed" v-html="clean(asset.keyFeatures)" />
       </section>
       <section v-if="asset.tags.length" class="flex flex-wrap gap-2">
         <span v-for="t in asset.tags" :key="t" class="rounded-full bg-gray-800 px-3 py-1 text-xs">{{ t }}</span>

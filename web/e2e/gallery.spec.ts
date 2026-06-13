@@ -23,7 +23,8 @@ test('open an asset and swipe its gallery', async ({ page }) => {
   const firstCount = await counter.textContent();
   expect(firstCount).toMatch(/^1\s*\/\s*\d+/);
 
-  // Navigate to next slide — PhotoSwipe v5 exposes the active instance on window.pswp.
+  // Navigate to next slide — window.pswp is PhotoSwipe's own public global (it assigns
+  // window.pswp = pswp inside _openWith/_openPhotoswipe), not a private/test-only handle.
   // Calling pswp.next() exercises the same internal code path as keyboard/swipe navigation.
   // Keyboard ArrowRight is unreliable in mobile-emulated touch contexts (no focused element),
   // so we drive PhotoSwipe's own API and verify the counter genuinely advances.
