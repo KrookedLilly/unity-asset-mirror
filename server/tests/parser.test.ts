@@ -104,4 +104,23 @@ describe('parseReviews', () => {
   it('throws ParserError when the product/reviews block is absent', () => {
     expect(() => parseReviews('<script>x.ReactDOMrender({"data":{"ENTITY":{"Product":{}}})</script>', '1', 'recent', 1)).toThrow(ParserError);
   });
+  it('prefers the reviews(...) cache key matching the requested page + sort', () => {
+    // Two reviews( keys in the Apollo cache: one for page 1, one for page 2 (same sort).
+    const html = '<script>x.ReactDOMrender(' + JSON.stringify({
+      data: { ENTITY: {
+        Product: { '1': {
+          'reviews({"rows":10,"page":1,"sortBy":"helpful"})': { total_entries: 2, last_page: 2, comments: [{ type: 'id', id: ['Comment', 'p1'] }] },
+          'reviews({"rows":10,"page":2,"sortBy":"helpful"})': { total_entries: 2, last_page: 2, comments: [{ type: 'id', id: ['Comment', 'p2'] }] },
+        } },
+        Comment: {
+          'p1': { id: 'p1', rating: 5, subject: 'Page one', full: 'first', replies: [] },
+          'p2': { id: 'p2', rating: 3, subject: 'Page two', full: 'second', replies: [] },
+        },
+      } },
+    }) + ')</script>';
+    const out = parseReviews(html, '1', 'helpful', 2);
+    expect(out.reviews).toHaveLength(1);
+    expect(out.reviews[0].id).toBe('p2');
+    expect(out.reviews[0].title).toBe('Page two');
+  });
 });

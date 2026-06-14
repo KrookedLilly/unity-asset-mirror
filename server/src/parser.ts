@@ -5,6 +5,9 @@ export class ParserError extends Error {
   constructor(message: string) { super(message); this.name = 'ParserError'; }
 }
 
+// Matches __component__.ReactDOMrender({...}) emitted by the Unity SSR bundle — one per
+// page. Both the detail (Product_ProductDetailController) and reviews (Product_ReviewController)
+// pages use this exact call, so anchoring on it (rather than a controller name) handles both.
 const RENDER_CALL = '.ReactDOMrender(';
 
 /** Find the balanced {...} object starting at `start` (string/escape aware). */
@@ -126,7 +129,10 @@ export function parseReviews(html: string, id: string, sort: string, page: numbe
   const entity = hydration?.data?.ENTITY;
   const product = entity?.Product?.[id];
   if (!product) throw new ParserError(`product ${id} not in data.ENTITY.Product — review parser needs updating`);
-  const key = Object.keys(product).find((k) => k.startsWith('reviews('));
+  const reviewKeys = Object.keys(product).filter((k) => k.startsWith('reviews('));
+  // The Apollo cache key encodes the args, e.g. reviews({"rows":10,"page":1,"sortBy":"helpful",...}).
+  // Prefer the one matching the requested page+sort; fall back to the first reviews( key.
+  const key = reviewKeys.find((k) => k.includes(`"page":${page}`) && k.includes(`"sortBy":"${sort}"`)) ?? reviewKeys[0];
   if (!key) throw new ParserError(`reviews(...) block not found on product ${id} — review parser needs updating`);
   const meta = product[key] ?? {};
   const refs: any[] = Array.isArray(meta.comments) ? meta.comments : [];
