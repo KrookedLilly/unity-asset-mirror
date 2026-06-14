@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { search, type SearchResult } from '../api.js';
 import SearchBar from '../components/SearchBar.vue';
@@ -17,16 +17,27 @@ const loading = ref(false); const error = ref(''); const hasMore = ref(false);
 const sentinel = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
 
+let pendingReset = false;
 async function run(reset: boolean) {
+  if (reset) pendingReset = true;
   if (loading.value) return;
+  const isReset = pendingReset;
+  pendingReset = false;
   loading.value = true; error.value = '';
-  if (reset) { page.value = 0; results.value = []; }
+  if (isReset) { page.value = 0; results.value = []; }
   try {
     const r = await search({ q: q.value, category: category.value, subcategory: subcategory.value, sort: sort.value, free: free.value, onSale: onSale.value, page: page.value });
-    results.value = reset ? r.results : [...results.value, ...r.results];
+    results.value = isReset ? r.results : [...results.value, ...r.results];
     total.value = r.totalCount; hasMore.value = r.hasMore;
   } catch (e) { error.value = (e as Error).message; }
-  finally { loading.value = false; }
+  finally {
+    loading.value = false;
+    if (pendingReset) { run(true); }
+    else if (hasMore.value && sentinel.value) {
+      const { top } = sentinel.value.getBoundingClientRect();
+      if (top < window.innerHeight) loadMore();
+    }
+  }
 }
 function loadMore() { if (hasMore.value && !loading.value) { page.value += 1; run(false); } }
 
@@ -39,7 +50,7 @@ onMounted(() => {
 onUnmounted(() => observer?.disconnect());
 
 function onSelect(sel: { category?: string; subcategory?: string }) { category.value = sel.category; subcategory.value = sel.subcategory; }
-const categoryLabel = () => subcategory.value ?? category.value ?? 'All categories';
+const categoryLabel = computed(() => subcategory.value ?? category.value ?? 'All categories');
 </script>
 
 <template>
@@ -47,7 +58,7 @@ const categoryLabel = () => subcategory.value ?? category.value ?? 'All categori
     <SearchBar v-model="q" @submit="run(true)" @open-asset="(id) => router.push(`/asset/${id}`)" />
     <div class="flex items-center justify-between gap-2">
       <button class="rounded-lg bg-gray-800 px-3 py-2 text-sm active:scale-95" @click="sheetOpen = true">
-        {{ categoryLabel() }} ▾
+        {{ categoryLabel }} ▾
       </button>
       <SortMenu v-model="sort" />
     </div>

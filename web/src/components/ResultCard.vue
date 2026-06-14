@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router';
 import type { SearchResult } from '../api.js';
 const props = defineProps<{ result: SearchResult }>();
 const router = useRouter();
-const fmt = (n: number | null) => (n == null ? '' : `$${n.toFixed(2)}`);
+const fmt = (n: number | null) => (n == null ? '–' : `$${n.toFixed(2)}`);
 </script>
 
 <template>

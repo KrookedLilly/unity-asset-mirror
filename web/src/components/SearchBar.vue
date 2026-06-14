@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { extractAssetId } from '../ids.js';
 
 const props = defineProps<{ modelValue: string }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void; (e: 'submit'): void; (e: 'open-asset', id: string): void }>();
 
 const text = ref(props.modelValue);
+watch(() => props.modelValue, (v) => { text.value = v; });
 const directId = computed(() => extractAssetId(text.value));
 
 function submit() {
