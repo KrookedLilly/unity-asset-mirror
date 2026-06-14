@@ -32,3 +32,38 @@ export function buildSearchBody(p: SearchParams): object {
     ...(aq.length ? { aq: aq.join(' AND ') } : {}),
   };
 }
+
+function num(v: unknown): number | null { return typeof v === 'number' ? v : null; }
+function normThumb(u: unknown): string | null {
+  if (typeof u !== 'string' || !u) return null;
+  return u.startsWith('//') ? 'https:' + u : u;
+}
+
+export function mapResults(json: any, page: number): SearchResponse {
+  const hits = Array.isArray(json?.results) ? json.results : [];
+  const results: SearchResult[] = hits.map((h: any): SearchResult => {
+    const r = h?.raw ?? {};
+    const final = num(r.ec_price_filter) ?? num(r.ec_price);
+    return {
+      id: String(r.permanentid ?? ''),
+      name: r.ec_name ?? '',
+      publisher: r.publisher_name ?? null,
+      thumbnail: normThumb(r.ec_thumbnails),
+      rating: num(r.ec_rating),
+      ratingCount: num(r.ec_rating_count),
+      category: r.ec_category_level1 ?? null,
+      subcategory: r.ec_category_level2 ?? null,
+      price: {
+        isFree: (num(r.ec_price_filter) ?? num(r.ec_price) ?? 0) === 0,
+        finalPrice: final,
+        originalPrice: num(r.ec_price),
+        onSale: Array.isArray(r.ec_sale_filters) && r.ec_sale_filters.includes('on_sale'),
+        discountPercent: typeof r.ec_sale_discount_percentage_filter === 'number'
+          ? Math.round(r.ec_sale_discount_percentage_filter * 100) : null,
+        currency: 'USD',
+      },
+    };
+  }).filter((r) => r.id !== '');
+  const totalCount = num(json?.totalCount) ?? 0;
+  return { results, totalCount, page, pageSize: PAGE_SIZE, hasMore: (page + 1) * PAGE_SIZE < totalCount };
+}
