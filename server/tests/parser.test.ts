@@ -64,3 +64,44 @@ describe('extractHydrationJson is controller-agnostic', () => {
     expect(data.data.ENTITY.Comment).toBeTruthy();
   });
 });
+
+describe('parseReviews', () => {
+  const out = parseReviews(reviewsHtml, '341308', 'helpful', 1);
+  it('maps reviews with author/title/body/helpful and pagination', () => {
+    expect(out.reviews.length).toBeGreaterThan(0);
+    expect(out.total).toBeGreaterThan(0);
+    expect(out.lastPage).toBeGreaterThan(1);
+    expect(out.pageSize).toBe(10);
+    expect(out.sort).toBe('helpful');
+    const r = out.reviews[0];
+    expect(typeof r.title).toBe('string');
+    expect(typeof r.body).toBe('string');
+    expect(typeof r.helpfulCount).toBe('number'); // parsed from the string is_helpful.count
+    expect(r.author === null || typeof r.author === 'string').toBe(true);
+  });
+  it('maps publisher replies (ref to another Comment) when present', () => {
+    // Synthetic hydration: one review with a reply that derefs to a Comment by a publisher user.
+    const html = '<script>x.ReactDOMrender(' + JSON.stringify({
+      data: { ENTITY: {
+        Product: { '1': { 'reviews({})': { total_entries: 1, last_page: 1, comments: [{ type: 'id', id: ['Comment', '10'] }] } } },
+        Comment: {
+          '10': { id: '10', rating: 4, subject: 'T', full: 'B', date: '2024-01-01T00:00:00Z', version: '1.0',
+                  is_helpful: { count: '3', score: '2' }, user: { type: 'id', id: ['ConnectUserProfile', '99'] },
+                  replies: [{ type: 'id', id: ['Comment', '11'] }] },
+          '11': { id: '11', full: 'Thanks for the feedback!', date: '2024-01-02T00:00:00Z',
+                  user: { type: 'id', id: ['ConnectUserProfile', '50'] }, replies: [] },
+        },
+        ConnectUserProfile: { '99': { name: 'Reviewer' }, '50': { name: 'Publisher' } },
+      } },
+    }) + ')</script>';
+    const r = parseReviews(html, '1', 'helpful', 1).reviews[0];
+    expect(r.rating).toBe(4);
+    expect(r.helpfulCount).toBe(3);
+    expect(r.helpfulScore).toBe(2);
+    expect(r.author).toBe('Reviewer');
+    expect(r.replies).toEqual([{ author: 'Publisher', date: '2024-01-02T00:00:00Z', body: 'Thanks for the feedback!' }]);
+  });
+  it('throws ParserError when the product/reviews block is absent', () => {
+    expect(() => parseReviews('<script>x.ReactDOMrender({"data":{"ENTITY":{"Product":{}}})</script>', '1', 'recent', 1)).toThrow(ParserError);
+  });
+});

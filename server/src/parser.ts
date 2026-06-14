@@ -1,4 +1,5 @@
 import type { Asset, AssetImage, AssetPrice } from './types.js';
+import type { Review, ReviewReply, ReviewsResponse } from './types.js';
 
 export class ParserError extends Error {
   constructor(message: string) { super(message); this.name = 'ParserError'; }
@@ -113,4 +114,48 @@ export function parseAssetDetail(html: string, id: string): Asset {
     images,
     fetchedAt: Date.now(),
   };
+}
+
+function toNum(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function parseReviews(html: string, id: string, sort: string, page: number): ReviewsResponse {
+  const hydration = extractHydrationJson(html);
+  const entity = hydration?.data?.ENTITY;
+  const product = entity?.Product?.[id];
+  if (!product) throw new ParserError(`product ${id} not in data.ENTITY.Product — review parser needs updating`);
+  const key = Object.keys(product).find((k) => k.startsWith('reviews('));
+  if (!key) throw new ParserError(`reviews(...) block not found on product ${id} — review parser needs updating`);
+  const meta = product[key] ?? {};
+  const refs: any[] = Array.isArray(meta.comments) ? meta.comments : [];
+
+  const nameOf = (userRef: any): string | null => {
+    const u = deref(entity, userRef);
+    return u && typeof u.name === 'string' && u.name ? u.name : null;
+  };
+  const mapReply = (ref: any): ReviewReply | null => {
+    const rc = deref(entity, ref); // a Comment entity (the reply)
+    if (!rc) return null;
+    return { author: nameOf(rc.user), date: rc.date ?? null, body: rc.full ?? '' };
+  };
+
+  const reviews: Review[] = refs
+    .map((ref) => deref(entity, ref))
+    .filter(Boolean)
+    .map((c: any): Review => ({
+      id: String(c.id ?? ''),
+      rating: typeof c.rating === 'number' ? c.rating : null,
+      title: c.subject ?? '',
+      body: c.full ?? '',
+      author: nameOf(c.user),
+      date: c.date ?? null,
+      version: c.version ?? null,
+      helpfulCount: toNum(c.is_helpful?.count),
+      helpfulScore: toNum(c.is_helpful?.score),
+      replies: Array.isArray(c.replies) ? c.replies.map(mapReply).filter((x: ReviewReply | null): x is ReviewReply => x !== null) : [],
+    }));
+
+  return { reviews, total: toNum(meta.total_entries), page, pageSize: 10, lastPage: toNum(meta.last_page), sort };
 }
