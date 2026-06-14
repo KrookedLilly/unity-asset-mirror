@@ -80,3 +80,31 @@ export interface Asset {
   images: AssetImage[];
   fetchedAt: number;             // epoch ms
 }
+
+export interface ReviewReply {
+  author: string | null;
+  date: string | null;
+  body: string;
+}
+
+export interface Review {
+  id: string;
+  rating: number | null;     // 1–5
+  title: string;
+  body: string;
+  author: string | null;
+  date: string | null;       // ISO
+  version: string | null;    // asset version reviewed
+  helpfulCount: number;
+  helpfulScore: number;
+  replies: ReviewReply[];    // publisher (and other) replies
+}
+
+export interface ReviewsResponse {
+  reviews: Review[];
+  total: number;
+  page: number;
+  pageSize: number;          // 10 (Unity-fixed)
+  lastPage: number;
+  sort: string;              // helpful | recent | rating
+}
