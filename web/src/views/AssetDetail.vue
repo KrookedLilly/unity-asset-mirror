@@ -3,6 +3,7 @@ import { ref, watchEffect } from 'vue';
 import DOMPurify from 'dompurify';
 import { getAsset, type Asset } from '../api.js';
 import Gallery from '../components/Gallery.vue';
+import Reviews from '../components/Reviews.vue';
 
 const props = defineProps<{ id: string }>();
 const asset = ref<Asset | null>(null);
@@ -55,6 +56,7 @@ const clean = (html: string | null) => (html ? DOMPurify.sanitize(html) : '');
         <h2 class="text-sm uppercase tracking-wide text-gray-500 mb-1">Key Features</h2>
         <div class="prose-invert text-sm leading-relaxed break-words" v-html="clean(asset.keyFeatures)" />
       </section>
+      <Reviews :asset-id="props.id" :rating="asset.rating" :review-count="asset.reviewCount" />
       <section v-if="asset.tags.length" class="flex flex-wrap gap-2">
         <span v-for="t in asset.tags" :key="t" class="rounded-full bg-gray-800 px-3 py-1 text-xs">{{ t }}</span>
       </section>
