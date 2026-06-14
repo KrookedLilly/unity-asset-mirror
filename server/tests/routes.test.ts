@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { buildApp } from '../src/routes.js';
 import { search as realSearch, getCategories as realCats } from '../src/searchService.js';
+import { getReviews as realGetReviews } from '../src/reviewsService.js';
 
 const fakeAsset = { id: '341308', name: 'Text Animator' } as any;
 
 function app(getAsset: any) {
-  return buildApp({} as any, { getAsset, search: realSearch, getCategories: realCats });
+  return buildApp({} as any, { getAsset, search: realSearch, getCategories: realCats, getReviews: realGetReviews });
 }
 
 describe('routes', () => {
@@ -51,6 +52,7 @@ describe('search routes', () => {
       getAsset: async () => ({} as any),
       search: async () => { throw new Error('unexpected real Coveo call'); },
       getCategories: async () => { throw new Error('unexpected real Coveo call'); },
+      getReviews: realGetReviews,
       ...over,
     });
   }
@@ -76,6 +78,30 @@ describe('search routes', () => {
   it('maps a coveo failure to 502', async () => {
     const res = await request(searchApp({ search: async () => { throw new Error('coveo search failed: HTTP 500'); } }))
       .get('/api/search?q=x');
+    expect(res.status).toBe(502);
+  });
+});
+
+describe('reviews route', () => {
+  const okReviews = { reviews: [{ id: '1', title: 'X' }], total: 5, page: 1, pageSize: 10, lastPage: 1, sort: 'helpful' } as any;
+  function revApp(getReviews: any) {
+    return buildApp({} as any, { getAsset: async () => ({} as any), search: realSearch, getCategories: realCats, getReviews });
+  }
+  it('GET /api/asset/:id/reviews forwards sort+page and returns JSON', async () => {
+    let seen: any;
+    const res = await request(revApp(async (id: string, p: any) => { seen = { id, ...p }; return okReviews; }))
+      .get('/api/asset/341308/reviews?sort=recent&page=2');
+    expect(res.status).toBe(200);
+    expect(res.body.reviews[0].title).toBe('X');
+    expect(seen).toMatchObject({ id: '341308', sort: 'recent', page: 2 });
+  });
+  it('rejects a non-numeric id with 400', async () => {
+    const res = await request(revApp(async () => okReviews)).get('/api/asset/abc/reviews');
+    expect(res.status).toBe(400);
+  });
+  it('maps a parser failure to 502', async () => {
+    const res = await request(revApp(async () => { throw new Error('review parser needs updating'); }))
+      .get('/api/asset/341308/reviews');
     expect(res.status).toBe(502);
   });
 });

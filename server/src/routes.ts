@@ -2,17 +2,19 @@ import express, { type Express } from 'express';
 import type { Db } from './cache.js';
 import { getAsset as defaultGetAsset } from './assetService.js';
 import { search as defaultSearch, getCategories as defaultGetCategories } from './searchService.js';
-import type { Asset, SearchResponse, Category, SearchParams } from './types.js';
+import { getReviews as defaultGetReviews } from './reviewsService.js';
+import type { Asset, SearchResponse, Category, SearchParams, ReviewsResponse } from './types.js';
 
 interface Deps {
   getAsset: (db: Db, id: string, opts?: { force?: boolean }) => Promise<Asset>;
   search: (p: SearchParams) => Promise<SearchResponse>;
   getCategories: (parent?: string) => Promise<Category[]>;
+  getReviews: (id: string, opts?: { sort?: string; page?: number }) => Promise<ReviewsResponse>;
 }
 
 export function buildApp(
   db: Db,
-  deps: Deps = { getAsset: defaultGetAsset, search: defaultSearch, getCategories: defaultGetCategories },
+  deps: Deps = { getAsset: defaultGetAsset, search: defaultSearch, getCategories: defaultGetCategories, getReviews: defaultGetReviews },
 ): Express {
   const app = express();
   app.use(express.json());
@@ -56,6 +58,15 @@ export function buildApp(
     deps.getCategories(parent)
       .then((c) => res.json(c))
       .catch((e) => res.status(502).json({ error: (e as Error).message }));
+  });
+
+  app.get('/api/asset/:id/reviews', (req, res) => {
+    if (!/^\d+$/.test(req.params.id)) { res.status(400).json({ error: 'invalid id' }); return; }
+    const sort = typeof req.query.sort === 'string' ? req.query.sort : undefined;
+    const page = Number(req.query.page ?? 1) || 1;
+    deps.getReviews(req.params.id, { sort, page })
+      .then((r) => res.json(r))
+      .catch((e) => res.status(/parser needs updating/.test((e as Error).message) ? 502 : 500).json({ error: (e as Error).message }));
   });
 
   return app;
