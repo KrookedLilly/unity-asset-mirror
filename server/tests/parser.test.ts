@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { extractHydrationJson, ParserError, parseAssetDetail } from '../src/parser.js';
+import { parseReviews } from '../src/parser.js';
 
 const html = readFileSync(new URL('./fixtures/detail-341308.html', import.meta.url), 'utf-8');
 
@@ -51,5 +52,15 @@ describe('parseAssetDetail', () => {
 
   it('throws when the product id is absent', () => {
     expect(() => parseAssetDetail(html, '999999999')).toThrow(ParserError);
+  });
+});
+
+const reviewsHtml = readFileSync(new URL('./fixtures/reviews-341308.html', import.meta.url), 'utf-8');
+
+describe('extractHydrationJson is controller-agnostic', () => {
+  it('extracts the hydration JSON from the reviews page too', () => {
+    const data = extractHydrationJson(reviewsHtml);
+    expect(data?.data?.ENTITY?.Product?.['341308']).toBeTruthy();
+    expect(data.data.ENTITY.Comment).toBeTruthy();
   });
 });

@@ -4,7 +4,6 @@ export class ParserError extends Error {
   constructor(message: string) { super(message); this.name = 'ParserError'; }
 }
 
-const HYDRATION_ANCHOR = 'window["Product_ProductDetailController"]';
 const RENDER_CALL = '.ReactDOMrender(';
 
 /** Find the balanced {...} object starting at `start` (string/escape aware). */
@@ -23,9 +22,9 @@ function sliceBalancedObject(s: string, start: number): string {
 }
 
 export function extractHydrationJson(html: string): any {
-  const anchor = html.indexOf(HYDRATION_ANCHOR);
-  if (anchor === -1) throw new ParserError('hydration anchor not found — parser needs updating');
-  const call = html.indexOf(RENDER_CALL, anchor);
+  // Both the detail page (Product_ProductDetailController) and the reviews page
+  // (Product_ReviewController) hydrate via a single `.ReactDOMrender({...})` call.
+  const call = html.indexOf(RENDER_CALL);
   if (call === -1) throw new ParserError('ReactDOMrender call not found — parser needs updating');
   let i = call + RENDER_CALL.length;
   while (i < html.length && /\s/.test(html[i])) i++;
