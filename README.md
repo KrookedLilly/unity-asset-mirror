@@ -2,9 +2,9 @@
 
 A personal, single-user web app that wraps the Unity Asset Store with a better, mobile-first UI — built because the official site is painful to browse on a phone. It fetches an asset's page, parses the data the page already hydrates with, caches it in SQLite, and renders it through a Vue PWA.
 
-**What's built:** a mobile-first **Browse** home — keyword search, category browse, sort (relevance / popular / newest / rating / price), and Free/On-Sale filters over an infinite-scroll list — plus an **asset detail page** with a **PhotoSwipe swipe + pinch-zoom fullscreen gallery** (no more tapping tiny arrows and drilling into images one at a time). You can also paste an id/URL straight into the search box to jump to an asset. Account features (owned/wishlist) and a personal layer (tags/collections) are deferred to later phases.
+**What's built:** a mobile-first **Browse** home — keyword search, category browse, sort (relevance / popular / newest / rating / price), and Free/On-Sale filters over an infinite-scroll list — plus an **asset detail page** with a **PhotoSwipe swipe + pinch-zoom fullscreen gallery** (no more tapping tiny arrows and drilling into images one at a time) and a **Reviews** section (sortable helpful / recent / rating, paginated, with publisher replies). You can also paste an id/URL straight into the search box to jump to an asset. Account features (owned/wishlist) and a personal layer (tags/collections) are deferred to later phases.
 
-Search results come from Unity's Coveo backend (reachable anonymously); asset detail is parsed from the product page. See the design specs and plans under `docs/superpowers/` (`…unity-asset-mirror-design`, `…detail-gallery-mvp`, `…search-and-browse-design`, `…search-and-browse`).
+Search results come from Unity's Coveo backend (reachable anonymously); asset detail and reviews are parsed from Unity's server-rendered pages. The API (`/api/search`, `/api/asset/:id`, `/api/asset/:id/reviews`) returns clean JSON — useful for an agent doing market research, since the official site is client-rendered. See the design specs and plans under `docs/superpowers/`.
 
 ## Architecture
 
