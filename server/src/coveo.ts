@@ -7,10 +7,12 @@ const TOKEN_URL = 'https://assetstore.unity.com/api/coveo/search-token';
 interface CachedToken { token: string; exp: number; } // exp = epoch seconds
 const tokenCache: Record<string, CachedToken> = {};
 
-/** test helper */
-export function __resetTokenCache(): void {
+function clearTokenCache(): void {
   for (const k of Object.keys(tokenCache)) delete tokenCache[k];
 }
+
+/** test helper */
+export function __resetTokenCache(): void { clearTokenCache(); }
 
 function decodeExp(jwt: string): number {
   try {
@@ -30,7 +32,8 @@ export async function getSearchToken(hub: string): Promise<string> {
   });
   if (!res.ok) throw new Error(`coveo token mint failed: HTTP ${res.status}`);
   const token = (await res.text()).replace(/^"|"$/g, '').trim();
-  tokenCache[hub] = { token, exp: decodeExp(token) };
+  const exp = decodeExp(token) || Math.floor(Date.now() / 1000) + 3600; // fall back to 1h if exp is missing/undecodable
+  tokenCache[hub] = { token, exp };
   return token;
 }
 
@@ -48,7 +51,7 @@ export async function coveoSearch(hub: string, body: object): Promise<any> {
     fetch(SEARCH_URL, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: payload });
   let res = await send(await getSearchToken(hub));
   if (res.status === 401) { // token rejected — refresh once and retry
-    __resetTokenCache();
+    clearTokenCache();
     res = await send(await getSearchToken(hub));
   }
   if (!res.ok) throw new Error(`coveo search failed: HTTP ${res.status}`);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getSearchToken, __resetTokenCache } from '../src/coveo.js';
+import { getSearchToken, coveoSearch, __resetTokenCache } from '../src/coveo.js';
 
 // Build a fake JWT whose payload.exp is `expSec`.
 function fakeJwt(expSec: number): string {
@@ -31,5 +31,38 @@ describe('getSearchToken', () => {
     await getSearchToken('Assetstore_Search');
     await getSearchToken('Assetstore_Search');
     expect(fetchMock).toHaveBeenCalledTimes(2); // re-minted because near expiry
+  });
+
+  it('caches a token whose exp cannot be decoded (1h fallback), not re-minting next call', async () => {
+    // Regression guard: a token with no decodable exp must NOT defeat the cache.
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => `"not-a-jwt"` });
+    vi.stubGlobal('fetch', fetchMock);
+    await getSearchToken('Assetstore_Search');
+    await getSearchToken('Assetstore_Search');
+    expect(fetchMock).toHaveBeenCalledTimes(1); // cached via 1h fallback, not re-minted
+  });
+});
+
+describe('coveoSearch 401 retry', () => {
+  beforeEach(() => __resetTokenCache());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('refreshes the token and retries once when the search endpoint returns 401', async () => {
+    delete process.env.COVEO_FIXTURE_DIR; // ensure the real fetch path, not fixture mode
+    const jwt = fakeJwt(Math.floor(Date.now() / 1000) + 3600);
+    let searchCalls = 0;
+    const fetchMock = vi.fn(async (url: any) => {
+      if (String(url).includes('search-token')) {
+        return { ok: true, status: 200, text: async () => `"${jwt}"` };
+      }
+      // search endpoint
+      searchCalls += 1;
+      if (searchCalls === 1) return { ok: false, status: 401, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => ({ results: [], totalCount: 0 }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(coveoSearch('Assetstore_Search', {})).resolves.toEqual({ results: [], totalCount: 0 });
+    expect(searchCalls).toBe(2); // one 401 + one retry
   });
 });

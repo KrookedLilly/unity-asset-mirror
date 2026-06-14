@@ -14,11 +14,14 @@ const SORT_MAP: Record<string, string> = {
   popular: '@ec_best_selling_score_last_year descending',
 };
 
+// Strip double-quotes so a client value can't break out of an `aq` field expression.
+const aqValue = (v: string) => v.replace(/"/g, '');
+
 export function buildSearchBody(p: SearchParams): object {
   const page = Math.max(0, p.page ?? 0);
   const aq: string[] = [];
-  if (p.category) aq.push(`@ec_category_level1=="${p.category}"`);
-  if (p.subcategory) aq.push(`@ec_category_level2=="${p.subcategory}"`);
+  if (p.category) aq.push(`@ec_category_level1=="${aqValue(p.category)}"`);
+  if (p.subcategory) aq.push(`@ec_category_level2=="${aqValue(p.subcategory)}"`);
   if (p.free) aq.push('@ec_price==0');
   if (p.onSale) aq.push('@ec_sale_filters==on_sale');
   const sortKey = p.sort ?? 'relevance';
@@ -95,8 +98,10 @@ export async function getCategories(parent?: string): Promise<Category[]> {
   const hit = catCache[key];
   if (hit && Date.now() - hit.at < CAT_TTL_MS) return hit.cats;
   const field = parent ? 'ec_category_level2' : 'ec_category_level1';
-  const body: any = { q: '', numberOfResults: 0, facets: [{ facetId: 'cat', field, numberOfValues: 30, type: 'specific' }] };
-  if (parent) body.aq = `@ec_category_level1=="${parent}"`;
+  const body: { q: string; numberOfResults: number; facets: object[]; aq?: string } = {
+    q: '', numberOfResults: 0, facets: [{ facetId: 'cat', field, numberOfValues: 30, type: 'specific' }],
+  };
+  if (parent) body.aq = `@ec_category_level1=="${aqValue(parent)}"`;
   const cats = mapCategories(await coveoSearch(LISTING_HUB, body));
   catCache[key] = { at: Date.now(), cats };
   return cats;

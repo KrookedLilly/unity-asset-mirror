@@ -46,7 +46,13 @@ describe('search routes', () => {
   const okSearch = { results: [{ id: '1', name: 'X' }], totalCount: 1, page: 0, pageSize: 24, hasMore: false } as any;
 
   function searchApp(over: Partial<{ search: any; getCategories: any }>) {
-    return buildApp({} as any, { getAsset: async () => ({} as any), search: realSearch, getCategories: realCats, ...over });
+    // Base defaults throw so a test that forgets to override can't silently hit live Coveo.
+    return buildApp({} as any, {
+      getAsset: async () => ({} as any),
+      search: async () => { throw new Error('unexpected real Coveo call'); },
+      getCategories: async () => { throw new Error('unexpected real Coveo call'); },
+      ...over,
+    });
   }
 
   it('GET /api/search forwards params and returns the response', async () => {

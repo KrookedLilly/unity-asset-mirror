@@ -50,6 +50,10 @@ describe('mapResults', () => {
     expect(out.pageSize).toBe(24);
     expect(out.hasMore).toBe(out.totalCount > 24);
   });
+  it('returns an empty response for malformed/empty Coveo json without throwing', () => {
+    expect(mapResults({}, 0)).toMatchObject({ results: [], totalCount: 0, page: 0, pageSize: 24, hasMore: false });
+    expect(mapResults({ results: null, totalCount: 0 }, 0)).toMatchObject({ results: [], totalCount: 0, hasMore: false });
+  });
 });
 
 describe('mapCategories', () => {
