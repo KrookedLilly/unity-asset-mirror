@@ -40,3 +40,16 @@ export async function getCategories(parent?: string): Promise<Category[]> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+export interface ReviewReply { author: string | null; date: string | null; body: string; }
+export interface Review {
+  id: string; rating: number | null; title: string; body: string; author: string | null;
+  date: string | null; version: string | null; helpfulCount: number; helpfulScore: number; replies: ReviewReply[];
+}
+export interface ReviewsResponse { reviews: Review[]; total: number; page: number; pageSize: number; lastPage: number; sort: string; }
+
+export async function getReviews(id: string, sort: string, page: number): Promise<ReviewsResponse> {
+  const res = await fetch(`/api/asset/${id}/reviews?sort=${encodeURIComponent(sort)}&page=${page}`);
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
+  return res.json();
+}
