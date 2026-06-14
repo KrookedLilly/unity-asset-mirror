@@ -9,22 +9,29 @@ const reviews = ref<Review[]>([]);
 const total = ref(0); const lastPage = ref(1); const page = ref(1);
 const loading = ref(false); const error = ref('');
 
+let pendingReset = false;
 async function load(reset: boolean) {
+  if (reset) pendingReset = true;
   if (loading.value) return;
+  const isReset = pendingReset;
+  pendingReset = false;
   loading.value = true; error.value = '';
-  if (reset) { page.value = 1; reviews.value = []; }
+  if (isReset) { page.value = 1; reviews.value = []; }
   try {
     const r = await getReviews(props.assetId, sort.value, page.value);
-    reviews.value = reset ? r.reviews : [...reviews.value, ...r.reviews];
+    reviews.value = isReset ? r.reviews : [...reviews.value, ...r.reviews];
     total.value = r.total; lastPage.value = r.lastPage;
   } catch (e) { error.value = (e as Error).message; }
-  finally { loading.value = false; }
+  finally {
+    loading.value = false;
+    if (pendingReset) load(true);
+  }
 }
 function setSort(s: 'helpful' | 'recent' | 'rating') { if (s !== sort.value) { sort.value = s; load(true); } }
 function loadMore() { if (page.value < lastPage.value && !loading.value) { page.value += 1; load(false); } }
 onMounted(() => load(true));
 
-const stars = (n: number | null) => '★'.repeat(n ?? 0) + '☆'.repeat(Math.max(0, 5 - (n ?? 0)));
+const stars = (n: number | null) => { const f = Math.max(0, Math.min(5, n ?? 0)); return '★'.repeat(f) + '☆'.repeat(5 - f); };
 const day = (d: string | null) => (d ? d.slice(0, 10) : '');
 const sortLabel = { helpful: 'Most helpful', recent: 'Recent', rating: 'Rating' } as const;
 </script>
@@ -38,6 +45,7 @@ const sortLabel = { helpful: 'Most helpful', recent: 'Recent', rating: 'Rating' 
       </h2>
       <div class="flex gap-1">
         <button v-for="s in (['helpful','recent','rating'] as const)" :key="s" type="button" @click="setSort(s)"
+                :aria-pressed="sort === s"
                 :class="`rounded-full px-3 py-1 text-xs active:scale-95 ${sort === s ? 'bg-indigo-600' : 'bg-gray-800'}`">
           {{ sortLabel[s] }}
         </button>
