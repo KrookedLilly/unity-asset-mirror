@@ -6,24 +6,24 @@ import type { AssetImage } from '../api.js';
 
 const props = defineProps<{ images: AssetImage[]; alt: string }>();
 
-// ratio[i] = naturalWidth/naturalHeight, captured when a thumbnail loads.
-const ratios = reactive<Record<number, number>>({});
+// dims[i] = the loaded image's natural { w, h }. The strip renders the same full-res
+// `_scaled` image PhotoSwipe displays, so these are the TRUE fullscreen dimensions — giving
+// PhotoSwipe a correct fit and 1:1 zoom instead of upscaling a made-up size (the old blur).
+const dims = reactive<Record<number, { w: number; h: number }>>({});
 const stripEl = ref<HTMLElement | null>(null);
 // Most-recently-opened lightbox, kept so we can tear it down on unmount.
 const activeLightbox = ref<InstanceType<typeof PhotoSwipeLightbox> | null>(null);
 
-function onThumbLoad(e: Event, i: number) {
+function onImageLoad(e: Event, i: number) {
   const img = e.target as HTMLImageElement;
-  if (img.naturalWidth && img.naturalHeight) ratios[i] = img.naturalWidth / img.naturalHeight;
+  if (img.naturalWidth && img.naturalHeight) dims[i] = { w: img.naturalWidth, h: img.naturalHeight };
 }
 
 function openAt(index: number) {
-  // Virtual display width to derive slide height from aspect ratio; PhotoSwipe rescales to viewport.
-  const SLIDE_VIRTUAL_WIDTH = 1600;
   const lightbox = new PhotoSwipeLightbox({
     dataSource: props.images.map((im, i) => {
-      const r = ratios[i] ?? (16 / 9); // fallback if thumbnail hasn't loaded yet
-      return { src: im.imageUrl, width: SLIDE_VIRTUAL_WIDTH, height: Math.round(SLIDE_VIRTUAL_WIDTH / r), alt: props.alt };
+      const d = dims[i] ?? { w: 1200, h: 675 }; // fallback until the image's true size is known
+      return { src: im.imageUrl, width: d.w, height: d.h, alt: props.alt };
     }),
     pswpModule: () => import('photoswipe'),
     wheelToZoom: true,
@@ -57,8 +57,8 @@ onUnmounted(() => {
     <button v-for="(im, i) in images" :key="im.index" type="button"
             class="snap-start shrink-0 rounded-lg overflow-hidden bg-gray-800 active:scale-95"
             @click="openAt(i)">
-      <img :src="im.thumbnailUrl" :alt="alt" loading="lazy"
-           class="h-40 w-auto object-cover" @load="onThumbLoad($event, i)" />
+      <img :src="im.imageUrl" :alt="alt" loading="lazy"
+           class="h-40 w-auto object-cover" @load="onImageLoad($event, i)" />
     </button>
   </div>
 </template>

@@ -47,6 +47,7 @@ export function mapResults(json: any, page: number): SearchResponse {
   const results: SearchResult[] = hits.map((h: any): SearchResult => {
     const r = h?.raw ?? {};
     const final = num(r.ec_price_filter) ?? num(r.ec_price);
+    const original = num(r.ec_price);
     return {
       id: String(r.permanentid ?? ''),
       name: r.ec_name ?? '',
@@ -57,10 +58,12 @@ export function mapResults(json: any, page: number): SearchResponse {
       category: r.ec_category_level1 ?? null,
       subcategory: r.ec_category_level2 ?? null,
       price: {
-        isFree: (num(r.ec_price_filter) ?? num(r.ec_price) ?? 0) === 0,
+        isFree: (final ?? 0) === 0,
         finalPrice: final,
-        originalPrice: num(r.ec_price),
-        onSale: Array.isArray(r.ec_sale_filters) && r.ec_sale_filters.includes('on_sale'),
+        originalPrice: original,
+        // Any sale type (on_sale / new_release_discount / flash_deal) lowers the price,
+        // so derive "on sale" from the price itself, not the sale-type tag.
+        onSale: final != null && original != null && final < original,
         discountPercent: typeof r.ec_sale_discount_percentage_filter === 'number'
           ? Math.round(r.ec_sale_discount_percentage_filter * 100) : null,
         currency: 'USD',

@@ -54,6 +54,18 @@ describe('mapResults', () => {
     expect(mapResults({}, 0)).toMatchObject({ results: [], totalCount: 0, page: 0, pageSize: 24, hasMore: false });
     expect(mapResults({ results: null, totalCount: 0 }, 0)).toMatchObject({ results: [], totalCount: 0, hasMore: false });
   });
+  it('marks onSale by price for ANY sale type (not just the on_sale tag)', () => {
+    const price = (filters: string[], orig: number, final: number) =>
+      mapResults({ results: [{ raw: { permanentid: '1', ec_name: 'X', ec_sale_filters: filters, ec_price: orig, ec_price_filter: final } }], totalCount: 1 }, 0).results[0].price;
+    // new_release_discount: $20 -> $10 is on sale even though it is NOT tagged 'on_sale'
+    expect(price(['new_release_discount'], 20, 10).onSale).toBe(true);
+    expect(price(['flash_deal'], 40, 30).onSale).toBe(true);
+    expect(price(['on_sale'], 15, 7.5).onSale).toBe(true);
+    // not on sale: final == original
+    expect(price([], 20, 20).onSale).toBe(false);
+    // free is not "on sale"
+    expect(price([], 0, 0).onSale).toBe(false);
+  });
 });
 
 describe('mapCategories', () => {

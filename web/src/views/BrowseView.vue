@@ -51,6 +51,8 @@ onUnmounted(() => observer?.disconnect());
 
 function onSelect(sel: { category?: string; subcategory?: string }) { category.value = sel.category; subcategory.value = sel.subcategory; }
 const categoryLabel = computed(() => subcategory.value ?? category.value ?? 'All categories');
+const hasActiveFilters = computed(() => !!(category.value || subcategory.value || free.value || onSale.value));
+function clearFilters() { category.value = undefined; subcategory.value = undefined; free.value = false; onSale.value = false; }
 </script>
 
 <template>
@@ -68,7 +70,11 @@ const categoryLabel = computed(() => subcategory.value ?? category.value ?? 'All
     <p v-if="!error && results.length" class="text-xs text-gray-500">{{ total.toLocaleString() }} results</p>
     <ResultList :results="results" />
     <p v-if="loading" class="py-4 text-center text-gray-400">Loading…</p>
-    <p v-else-if="!results.length && !error" class="py-8 text-center text-gray-500">No results.</p>
+    <div v-else-if="!results.length && !error" class="py-8 flex flex-col items-center gap-3 text-center text-gray-500">
+      <p>{{ hasActiveFilters ? 'No results — you have filters active.' : 'No results.' }}</p>
+      <button v-if="hasActiveFilters" type="button" @click="clearFilters"
+              class="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white active:scale-95">Clear filters</button>
+    </div>
     <div ref="sentinel" class="h-px"></div>
 
     <CategorySheet :open="sheetOpen" @close="sheetOpen = false" @select="onSelect" />
