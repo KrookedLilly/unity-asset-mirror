@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildSearchBody, mapResults } from '../src/searchService.js';
+import { buildSearchBody, mapResults, mapCategories } from '../src/searchService.js';
 const searchFixture = JSON.parse(readFileSync(new URL('./fixtures/coveo-search-terrain.json', import.meta.url), 'utf-8'));
+const facetFixture = JSON.parse(readFileSync(new URL('./fixtures/coveo-facets-categories.json', import.meta.url), 'utf-8'));
 
 describe('buildSearchBody', () => {
   it('paginates and maps the default sort', () => {
@@ -48,5 +49,19 @@ describe('mapResults', () => {
     expect(out.totalCount).toBeGreaterThan(0);
     expect(out.pageSize).toBe(24);
     expect(out.hasMore).toBe(out.totalCount > 24);
+  });
+});
+
+describe('mapCategories', () => {
+  const cats = mapCategories(facetFixture);
+  it('maps facet values to labelled categories with counts', () => {
+    expect(cats.length).toBeGreaterThan(0);
+    const tools = cats.find((c) => c.slug === 'tools');
+    expect(tools).toBeTruthy();
+    expect(tools!.label).toBe('Tools');
+    expect(tools!.count).toBeGreaterThan(0);
+  });
+  it('labels a level-2 slug by its last segment', () => {
+    expect(mapCategories({ facets: [{ values: [{ value: 'tools > terrain', numberOfResults: 5 }] }] })[0].label).toBe('Terrain');
   });
 });

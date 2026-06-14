@@ -67,3 +67,40 @@ export function mapResults(json: any, page: number): SearchResponse {
   const totalCount = num(json?.totalCount) ?? 0;
   return { results, totalCount, page, pageSize: PAGE_SIZE, hasMore: (page + 1) * PAGE_SIZE < totalCount };
 }
+
+function labelFor(slug: string): string {
+  const last = slug.split('>').pop()!.trim();
+  return last.split(/[\s-]+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+export function mapCategories(json: any): Category[] {
+  const values = json?.facets?.[0]?.values ?? [];
+  return values
+    .filter((v: any) => typeof v?.value === 'string' && v.value)
+    .map((v: any): Category => ({ slug: v.value, label: labelFor(v.value), count: v.numberOfResults ?? 0 }));
+}
+
+export async function search(p: SearchParams): Promise<SearchResponse> {
+  const json = await coveoSearch(SEARCH_HUB, buildSearchBody(p));
+  return mapResults(json, Math.max(0, p.page ?? 0));
+}
+
+// In-memory category cache (24h). Key '' = top level; key '<slug>' = that category's subs.
+interface CatCache { at: number; cats: Category[]; }
+const catCache: Record<string, CatCache> = {};
+const CAT_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function getCategories(parent?: string): Promise<Category[]> {
+  const key = parent ?? '';
+  const hit = catCache[key];
+  if (hit && Date.now() - hit.at < CAT_TTL_MS) return hit.cats;
+  const field = parent ? 'ec_category_level2' : 'ec_category_level1';
+  const body: any = { q: '', numberOfResults: 0, facets: [{ facetId: 'cat', field, numberOfValues: 30, type: 'specific' }] };
+  if (parent) body.aq = `@ec_category_level1=="${parent}"`;
+  const cats = mapCategories(await coveoSearch(LISTING_HUB, body));
+  catCache[key] = { at: Date.now(), cats };
+  return cats;
+}
+
+/** test helper */
+export function __resetCatCache(): void { for (const k of Object.keys(catCache)) delete catCache[k]; }
