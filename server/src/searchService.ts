@@ -63,7 +63,7 @@ export function mapResults(json: any, page: number): SearchResponse {
         currency: 'USD',
       },
     };
-  }).filter((r) => r.id !== '');
+  }).filter((r: SearchResult) => r.id !== '');
   const totalCount = num(json?.totalCount) ?? 0;
   return { results, totalCount, page, pageSize: PAGE_SIZE, hasMore: (page + 1) * PAGE_SIZE < totalCount };
 }
