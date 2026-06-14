@@ -1,3 +1,48 @@
+export interface SearchResultPrice {
+  isFree: boolean;
+  finalPrice: number | null;
+  originalPrice: number | null;
+  onSale: boolean;
+  discountPercent: number | null; // whole percent, e.g. 50
+  currency: string;
+}
+
+export interface SearchResult {
+  id: string;
+  name: string;
+  publisher: string | null;
+  thumbnail: string | null;
+  rating: number | null;
+  ratingCount: number | null;
+  category: string | null;     // ec_category_level1, e.g. "tools"
+  subcategory: string | null;  // ec_category_level2, e.g. "tools > terrain"
+  price: SearchResultPrice;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface Category {
+  slug: string;   // facet value, e.g. "tools" or "tools > terrain"
+  label: string;  // display label, e.g. "Tools" / "Terrain"
+  count: number;
+}
+
+export interface SearchParams {
+  q?: string;
+  category?: string;
+  subcategory?: string;
+  sort?: string;   // relevance | price-asc | price-desc | rating | newest | popular
+  free?: boolean;
+  onSale?: boolean;
+  page?: number;
+}
+
 export interface AssetImage {
   index: number;
   type: string;          // "screenshot" | "youtube" | ...
