@@ -6,7 +6,7 @@ export default defineConfig({
   webServer: [
     {
       // Run backend in fixture mode from server/ dir using its own tsx
-      command: 'ASSET_FIXTURE=./tests/fixtures/detail-341308.html PORT=8787 node_modules/.bin/tsx src/server.ts',
+      command: 'ASSET_FIXTURE=./tests/fixtures/detail-341308.html COVEO_FIXTURE_DIR=./tests/fixtures PORT=8787 node_modules/.bin/tsx src/server.ts',
       cwd: '../server',
       url: 'http://localhost:8787/api/asset/341308',
       reuseExistingServer: !process.env.CI,
