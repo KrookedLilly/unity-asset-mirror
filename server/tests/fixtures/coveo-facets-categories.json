@@ -1,0 +1,68 @@
+{
+  "totalCount" : 119713,
+  "totalCountFiltered" : 119713,
+  "duration" : 131,
+  "indexDuration" : 108,
+  "requestDuration" : 111,
+  "searchUid" : "0d55bb10-2557-4e9d-88aa-2b138a019977",
+  "pipeline" : "AssetStore_Website_Search",
+  "apiVersion" : 2,
+  "queryCorrections" : [ ],
+  "warnings" : [ "The searchHub in the query parameters was overridden by the searchHub in the token." ],
+  "index" : "unitytechnologiesproductionmkahteav-hdrhb4eu-Indexer-6-qx2xwwjqbl7xwm3rc3uhq22afa",
+  "logicalIndex" : "default",
+  "indexRegion" : "us-east-2",
+  "indexToken" : "dW5pdHl0ZWNobm9sb2dpZXNwcm9kdWN0aW9ubWthaHRlYXYtaGRyaGI0ZXUtSW5kZXhlci02LXF4Mnh3d2pxYmw3eHdtM3JjM3VocTIyYWZh",
+  "refinedKeywords" : [ ],
+  "triggers" : [ ],
+  "termsToHighlight" : { },
+  "phrasesToHighlight" : { },
+  "groupByResults" : [ ],
+  "facets" : [ {
+    "facetId" : "cat",
+    "field" : "ec_category_level1",
+    "moreValuesAvailable" : false,
+    "values" : [ {
+      "value" : "2d",
+      "state" : "idle",
+      "numberOfResults" : 16685
+    }, {
+      "value" : "3d",
+      "state" : "idle",
+      "numberOfResults" : 66155
+    }, {
+      "value" : "add-ons",
+      "state" : "idle",
+      "numberOfResults" : 107
+    }, {
+      "value" : "audio",
+      "state" : "idle",
+      "numberOfResults" : 13836
+    }, {
+      "value" : "essentials",
+      "state" : "idle",
+      "numberOfResults" : 58
+    }, {
+      "value" : "sdk",
+      "state" : "idle",
+      "numberOfResults" : 9
+    }, {
+      "value" : "templates",
+      "state" : "idle",
+      "numberOfResults" : 3923
+    }, {
+      "value" : "tools",
+      "state" : "idle",
+      "numberOfResults" : 13648
+    }, {
+      "value" : "vfx",
+      "state" : "idle",
+      "numberOfResults" : 5292
+    } ],
+    "indexScore" : 0.2942857142857143
+  } ],
+  "suggestedFacets" : [ ],
+  "categoryFacets" : [ ],
+  "results" : [ ],
+  "extendedResults" : { }
+}
