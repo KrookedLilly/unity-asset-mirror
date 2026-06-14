@@ -1,0 +1,65 @@
+<script setup lang="ts">
+import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { search, type SearchResult } from '../api.js';
+import SearchBar from '../components/SearchBar.vue';
+import SortMenu from '../components/SortMenu.vue';
+import FilterToggles from '../components/FilterToggles.vue';
+import CategorySheet from '../components/CategorySheet.vue';
+import ResultList from '../components/ResultList.vue';
+
+const router = useRouter();
+const q = ref(''); const sort = ref('relevance'); const free = ref(false); const onSale = ref(false);
+const category = ref<string | undefined>(); const subcategory = ref<string | undefined>();
+const sheetOpen = ref(false);
+const results = ref<SearchResult[]>([]); const total = ref(0); const page = ref(0);
+const loading = ref(false); const error = ref(''); const hasMore = ref(false);
+const sentinel = ref<HTMLElement | null>(null);
+let observer: IntersectionObserver | null = null;
+
+async function run(reset: boolean) {
+  if (loading.value) return;
+  loading.value = true; error.value = '';
+  if (reset) { page.value = 0; results.value = []; }
+  try {
+    const r = await search({ q: q.value, category: category.value, subcategory: subcategory.value, sort: sort.value, free: free.value, onSale: onSale.value, page: page.value });
+    results.value = reset ? r.results : [...results.value, ...r.results];
+    total.value = r.totalCount; hasMore.value = r.hasMore;
+  } catch (e) { error.value = (e as Error).message; }
+  finally { loading.value = false; }
+}
+function loadMore() { if (hasMore.value && !loading.value) { page.value += 1; run(false); } }
+
+watch([sort, free, onSale, category, subcategory], () => run(true));
+onMounted(() => {
+  run(true); // empty query => Popular
+  observer = new IntersectionObserver((es) => { if (es[0].isIntersecting) loadMore(); });
+  if (sentinel.value) observer.observe(sentinel.value);
+});
+onUnmounted(() => observer?.disconnect());
+
+function onSelect(sel: { category?: string; subcategory?: string }) { category.value = sel.category; subcategory.value = sel.subcategory; }
+const categoryLabel = () => subcategory.value ?? category.value ?? 'All categories';
+</script>
+
+<template>
+  <main class="mx-auto max-w-3xl p-4 pb-24 flex flex-col gap-3">
+    <SearchBar v-model="q" @submit="run(true)" @open-asset="(id) => router.push(`/asset/${id}`)" />
+    <div class="flex items-center justify-between gap-2">
+      <button class="rounded-lg bg-gray-800 px-3 py-2 text-sm active:scale-95" @click="sheetOpen = true">
+        {{ categoryLabel() }} ▾
+      </button>
+      <SortMenu v-model="sort" />
+    </div>
+    <FilterToggles v-model:free="free" v-model:onSale="onSale" />
+
+    <p v-if="error" class="text-red-400 text-sm">{{ error }}</p>
+    <p v-if="!error && results.length" class="text-xs text-gray-500">{{ total.toLocaleString() }} results</p>
+    <ResultList :results="results" />
+    <p v-if="loading" class="py-4 text-center text-gray-400">Loading…</p>
+    <p v-else-if="!results.length && !error" class="py-8 text-center text-gray-500">No results.</p>
+    <div ref="sentinel" class="h-px"></div>
+
+    <CategorySheet :open="sheetOpen" @close="sheetOpen = false" @select="onSelect" />
+  </main>
+</template>

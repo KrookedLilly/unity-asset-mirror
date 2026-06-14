@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test('open an asset and swipe its gallery', async ({ page }) => {
   await page.goto('/');
-  await page.getByPlaceholder(/341308/).fill('341308');
-  await page.getByRole('button', { name: 'Open' }).click();
+  await page.getByPlaceholder(/Search assets/).fill('341308');
+  await page.getByRole('button', { name: /Open asset 341308/ }).click();
 
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Text Animator', { timeout: 15000 });
 
