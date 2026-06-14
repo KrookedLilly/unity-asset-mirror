@@ -1,4 +1,8 @@
 @import "tailwindcss";
 
 html, body, #app { height: 100%; }
+/* The page must never scroll horizontally; full-bleed carousels keep their own
+   internal overflow-x scroll. `clip` (not `hidden`) avoids creating a scroll
+   container, so vertical scrolling/sticky behaviour is unaffected. */
+html, body { overflow-x: clip; }
 body { @apply bg-gray-900 text-gray-100; }
